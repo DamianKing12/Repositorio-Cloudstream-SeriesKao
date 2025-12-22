@@ -103,7 +103,7 @@ class SeriesKaoProvider : MainAPI() {
     ): Boolean {
         val doc = app.get(data, headers = headers).document
 
-        // 1. Subtítulos migrados
+        // 1. Subtítulos
         doc.select("track[kind=subtitles]").forEach { track ->
             val src = track.attr("src")
             if (src.isNotBlank()) {
@@ -116,7 +116,7 @@ class SeriesKaoProvider : MainAPI() {
             }
         }
 
-        // 2. Extracción de IFRAMES usando newExtractorLink (MIGRADO)
+        // 2. Extracción de IFRAMES (Corregido)
         doc.select("iframe").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank()) {
@@ -124,15 +124,16 @@ class SeriesKaoProvider : MainAPI() {
                     newExtractorLink(
                         source = "SeriesKao",
                         name = "Enlace Externo",
-                        url = src,
-                        referer = mainUrl,
-                        quality = Qualities.Unknown.value
-                    )
+                        url = src
+                    ).apply {
+                        this.referer = mainUrl
+                        this.quality = Qualities.Unknown.value
+                    }
                 )
             }
         }
 
-        // 3. Extracción de Servidores usando newExtractorLink (MIGRADO)
+        // 3. Extracción de Servidores desde JSON (Corregido)
         val scriptElement = doc.selectFirst("script:containsData(var servers =)")
         if (scriptElement != null) {
             val serversJson = scriptElement.data().substringAfter("var servers = ").substringBefore(";").trim()
@@ -144,11 +145,12 @@ class SeriesKaoProvider : MainAPI() {
                         newExtractorLink(
                             source = server.title,
                             name = server.title,
-                            url = cleanUrl,
-                            referer = mainUrl,
-                            quality = getQuality(server.title),
-                            isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
-                        )
+                            url = cleanUrl
+                        ).apply {
+                            this.referer = mainUrl
+                            this.quality = getQuality(server.title)
+                            this.isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
+                        }
                     )
                 }
             } catch (e: Exception) { e.printStackTrace() }
