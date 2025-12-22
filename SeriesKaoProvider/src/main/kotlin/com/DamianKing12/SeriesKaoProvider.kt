@@ -108,31 +108,33 @@ class SeriesKaoProvider : MainAPI() {
             val src = track.attr("src")
             if (src.isNotBlank()) {
                 subtitleCallback(
-                    newSubtitleFile(
-                        lang = track.attr("srclang") ?: "es",
-                        url = src
+                    SubtitleFile(
+                        url = src,
+                        lang = track.attr("srclang") ?: "es"
                     )
                 )
             }
         }
 
-        // 2. Extracción de IFRAMES (Usando newExtractorLink)
+        // 2. Extracción de IFRAMES
         doc.select("iframe").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank()) {
+                // LLAMADA SEGURA: No usamos parámetros nombrados para evitar errores de compilación
                 callback(
                     newExtractorLink(
-                        source = "SeriesKao",
-                        name = "Enlace Externo",
-                        url = src,
-                        referer = mainUrl,
-                        quality = Qualities.Unknown.value
+                        "SeriesKao",
+                        "Enlace Externo",
+                        src,
+                        mainUrl,
+                        Qualities.Unknown.value,
+                        src.contains(".m3u8", ignoreCase = true)
                     )
                 )
             }
         }
 
-        // 3. Extracción de Servidores desde JSON (Usando newExtractorLink)
+        // 3. Extracción de Servidores desde JSON
         val scriptElement = doc.selectFirst("script:containsData(var servers =)")
         if (scriptElement != null) {
             val serversJson = scriptElement.data().substringAfter("var servers = ").substringBefore(";").trim()
@@ -140,14 +142,15 @@ class SeriesKaoProvider : MainAPI() {
                 val servers = parseJson<List<ServerData>>(serversJson)
                 servers.forEach { server ->
                     val cleanUrl = server.url.replace("\\/", "/")
+                    // LLAMADA SEGURA: Posicional para saltar la validación de nombres del compilador
                     callback(
                         newExtractorLink(
-                            source = server.title,
-                            name = server.title,
-                            url = cleanUrl,
-                            referer = mainUrl,
-                            quality = getQuality(server.title),
-                            isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
+                            server.title,
+                            server.title,
+                            cleanUrl,
+                            mainUrl,
+                            getQuality(server.title),
+                            cleanUrl.contains(".m3u8", ignoreCase = true)
                         )
                     )
                 }
