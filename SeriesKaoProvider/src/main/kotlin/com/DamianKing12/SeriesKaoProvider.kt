@@ -94,6 +94,7 @@ class SeriesKaoProvider : MainAPI() {
         }
     }
 
+    // 🔥 CORREGIDO: newExtractorLink() con sintaxis lambda - SIN WARNINGS
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -107,7 +108,7 @@ class SeriesKaoProvider : MainAPI() {
             val src = track.attr("src")
             if (src.isNotBlank()) {
                 subtitleCallback(
-                    SubtitleFile(
+                    newSubtitleFile(
                         lang = track.attr("srclang") ?: "es",
                         url = src
                     )
@@ -115,42 +116,43 @@ class SeriesKaoProvider : MainAPI() {
             }
         }
 
-        // 2️⃣ IFRAMES (reproductores externos)
+        // 2️⃣ IFRAMES - newExtractorLink con bloque apply
         doc.select("iframe").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank()) {
                 callback(
-                    ExtractorLink(
-                        source = "iframe",
+                    newExtractorLink(
                         name = "iframe",
-                        url = src,
-                        referer = mainUrl,
-                        quality = Qualities.Unknown.value,
-                        isM3u8 = false
-                    )
+                        url = src,  // Argumento posicional
+                        source = "iframe"
+                    ) {
+                        // Bloque apply para propiedades adicionales
+                        this.referer = mainUrl
+                        this.isM3u8 = false
+                    }
                 )
             }
         }
 
-        // 3️⃣ MASTER.TXT (índices HLS)
+        // 3️⃣ MASTER.TXT - newExtractorLink
         val masterScript = doc.select("script").map { it.data() }.firstOrNull { it.contains("master.txt") }
         if (masterScript != null) {
             val masterUrl = Regex("""(https?://[^"'\s]+master\.txt)""").find(masterScript)?.value
             if (masterUrl != null) {
                 callback(
-                    ExtractorLink(
-                        source = "HLS",
+                    newExtractorLink(
                         name = "HLS",
                         url = masterUrl,
-                        referer = mainUrl,
-                        quality = Qualities.Unknown.value,
-                        isM3u8 = true
-                    )
+                        source = "HLS"
+                    ) {
+                        this.referer = mainUrl
+                        this.isM3u8 = true
+                    }
                 )
             }
         }
 
-        // 4️⃣ SERVIDORES VAR SERVERS (retrocompatibilidad)
+        // 4️⃣ SERVIDORES VAR SERVERS - newExtractorLink
         val scriptElement = doc.selectFirst("script:containsData(var servers =)")
         if (scriptElement != null) {
             val serversJson = scriptElement.data().substringAfter("var servers = ").substringBefore(";").trim()
@@ -158,16 +160,16 @@ class SeriesKaoProvider : MainAPI() {
                 val servers = AppUtils.parseJson<List<ServerData>>(serversJson)
                 servers.forEach { server ->
                     val cleanUrl = server.url.replace("\\/", "/")
-                    val quality = getQuality(server.title)
                     callback(
-                        ExtractorLink(
-                            source = server.title,
+                        newExtractorLink(
                             name = server.title,
                             url = cleanUrl,
-                            referer = mainUrl,
-                            quality = quality,
-                            isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
-                        )
+                            source = server.title
+                        ) {
+                            this.quality = getQuality(server.title)
+                            this.referer = mainUrl
+                            this.isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
+                        }
                     )
                 }
                 servers.isNotEmpty()
