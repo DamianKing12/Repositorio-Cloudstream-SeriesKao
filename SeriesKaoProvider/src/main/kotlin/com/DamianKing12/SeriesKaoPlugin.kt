@@ -7,7 +7,7 @@ import android.content.Context
 @CloudstreamPlugin
 class SeriesKaoPlugin: Plugin() {
     override fun load(context: Context) {
-        // Al registrar el provider, nos aseguramos de que la app lo reconozca
+        // Registra el proveedor correctamente
         registerMainAPI(SeriesKaoProvider())
     }
 }
