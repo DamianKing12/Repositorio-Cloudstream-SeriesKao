@@ -16,6 +16,11 @@ android {
         buildConfig = true
         viewBinding = false
     }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
 }
 
 cloudstream {
@@ -32,8 +37,8 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     
-    // USAMOS LA RUTA DIRECTA DE GITHUB PARA EVITAR ERRORES DE JITPACK
-    implementation("com.github.recloudstream:cloudstream:pre-release")
+    // Versión fija para máxima estabilidad
+    implementation("com.lagradost:cloudstream3:4.6.0")
     
     implementation(kotlin("stdlib"))
     implementation("com.github.Blatzar:NiceHttp:0.4.11")
