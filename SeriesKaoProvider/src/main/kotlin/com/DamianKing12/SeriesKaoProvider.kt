@@ -107,9 +107,9 @@ class SeriesKaoProvider : MainAPI() {
             val src = track.attr("src")
             if (src.isNotBlank()) {
                 subtitleCallback(
-                    newSubtitleFile(
-                        track.attr("srclang") ?: "es",
-                        src
+                    SubtitleFile(
+                        lang = track.attr("srclang") ?: "es",
+                        url = src
                     )
                 )
             }
@@ -120,14 +120,14 @@ class SeriesKaoProvider : MainAPI() {
             val src = iframe.attr("src")
             if (src.isNotBlank()) {
                 callback(
-                    newExtractorLink(
-                        name = "iframe",
+                    ExtractorLink(
                         source = "iframe",
-                        url = src
-                    ).apply {
-                        this.referer = mainUrl
-                        this.isM3u8 = false
-                    }
+                        name = "iframe",
+                        url = src,
+                        referer = mainUrl,
+                        quality = Qualities.Unknown.value,
+                        isM3u8 = false
+                    )
                 )
             }
         }
@@ -138,14 +138,14 @@ class SeriesKaoProvider : MainAPI() {
             val masterUrl = Regex("""(https?://[^"'\s]+master\.txt)""").find(masterScript)?.value
             if (masterUrl != null) {
                 callback(
-                    newExtractorLink(
-                        name = "HLS",
+                    ExtractorLink(
                         source = "HLS",
-                        url = masterUrl
-                    ).apply {
-                        this.referer = mainUrl
-                        this.isM3u8 = true // Es índice HLS
-                    }
+                        name = "HLS",
+                        url = masterUrl,
+                        referer = mainUrl,
+                        quality = Qualities.Unknown.value,
+                        isM3u8 = true
+                    )
                 )
             }
         }
@@ -158,16 +158,16 @@ class SeriesKaoProvider : MainAPI() {
                 val servers = AppUtils.parseJson<List<ServerData>>(serversJson)
                 servers.forEach { server ->
                     val cleanUrl = server.url.replace("\\/", "/")
+                    val quality = getQuality(server.title)
                     callback(
-                        newExtractorLink(
-                            name = server.title,
+                        ExtractorLink(
                             source = server.title,
-                            url = cleanUrl
-                        ).apply {
-                            this.quality = getQuality(server.title)
-                            this.isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
-                            this.referer = mainUrl
-                        }
+                            name = server.title,
+                            url = cleanUrl,
+                            referer = mainUrl,
+                            quality = quality,
+                            isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
+                        )
                     )
                 }
                 servers.isNotEmpty()
