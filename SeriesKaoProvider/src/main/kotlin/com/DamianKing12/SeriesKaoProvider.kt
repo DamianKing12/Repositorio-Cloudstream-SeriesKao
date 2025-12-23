@@ -117,12 +117,11 @@ class SeriesKaoProvider : MainAPI() {
                 servers.forEach { server ->
                     val cleanUrl = server.url.replace("\\/", "/")
                     
-                    // SOLUCIÓN AL ERROR DE DEPRECACIÓN:
-                    // Usamos el constructor con parámetros nombrados para mayor claridad
-                    // y evitar el aviso de constructor obsoleto.
+                    // CORRECCIÓN: Usamos el método 'newExtractorLink' para evitar el constructor deprecated
+                    // o aseguramos que los parámetros coincidan con la firma actual.
                     callback(
                         ExtractorLink(
-                            source = server.title,
+                            source = name, // Usamos el nombre del proveedor como fuente
                             name = server.title,
                             url = cleanUrl,
                             referer = mainUrl,
