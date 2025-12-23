@@ -117,16 +117,17 @@ class SeriesKaoProvider : MainAPI() {
                 servers.forEach { server ->
                     val cleanUrl = server.url.replace("\\/", "/")
                     
-                    // CORRECCIÓN: Usamos el constructor simplificado que pide la v4.6.0
-                    // para evitar el error 'deprecated'
+                    // SOLUCIÓN AL ERROR DE DEPRECACIÓN:
+                    // Usamos el constructor con parámetros nombrados para mayor claridad
+                    // y evitar el aviso de constructor obsoleto.
                     callback(
                         ExtractorLink(
-                            server.title,
-                            server.title,
-                            cleanUrl,
-                            mainUrl,
-                            getQuality(server.title),
-                            cleanUrl.contains(".m3u8", ignoreCase = true)
+                            source = server.title,
+                            name = server.title,
+                            url = cleanUrl,
+                            referer = mainUrl,
+                            quality = getQuality(server.title),
+                            isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
                         )
                     )
                 }
