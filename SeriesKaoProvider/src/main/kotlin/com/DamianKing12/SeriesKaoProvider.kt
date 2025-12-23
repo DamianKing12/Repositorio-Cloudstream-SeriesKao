@@ -31,7 +31,6 @@ class SeriesKaoProvider : MainAPI() {
             val year = el.selectFirst(".poster-card__year")?.text()?.toIntOrNull()
 
             if (href.contains("/pelicula/", ignoreCase = true)) {
-                // CORRECCIÓN: En v4.6.0 el TvType es obligatorio como tercer parámetro
                 newMovieSearchResponse(title, href, TvType.Movie) {
                     this.posterUrl = poster
                     this.year = year
@@ -118,15 +117,16 @@ class SeriesKaoProvider : MainAPI() {
                 servers.forEach { server ->
                     val cleanUrl = server.url.replace("\\/", "/")
                     
-                    // CORRECCIÓN FINAL: Sintaxis limpia para v4.6.0
+                    // CORRECCIÓN: Usamos el constructor simplificado que pide la v4.6.0
+                    // para evitar el error 'deprecated'
                     callback(
                         ExtractorLink(
-                            source = server.title,
-                            name = server.title,
-                            url = cleanUrl,
-                            referer = mainUrl,
-                            quality = getQuality(server.title),
-                            isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
+                            server.title,
+                            server.title,
+                            cleanUrl,
+                            mainUrl,
+                            getQuality(server.title),
+                            cleanUrl.contains(".m3u8", ignoreCase = true)
                         )
                     )
                 }
