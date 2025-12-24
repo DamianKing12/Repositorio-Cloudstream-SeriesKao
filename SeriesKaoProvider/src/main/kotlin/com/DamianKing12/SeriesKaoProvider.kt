@@ -120,14 +120,14 @@ class SeriesKaoProvider : MainAPI() {
                     // CORRECCIÓN: Usamos el método 'newExtractorLink' para evitar el constructor deprecated
                     // o aseguramos que los parámetros coincidan con la firma actual.
                     callback(
-                        ExtractorLink(
-                            source = name, // Usamos el nombre del proveedor como fuente
+                        newExtractorLink(
+                            source = name,
                             name = server.title,
-                            url = cleanUrl,
-                            referer = mainUrl,
-                            quality = getQuality(server.title),
-                            isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
-                        )
+                            url = cleanUrl
+                        ) {
+                            this.referer = mainUrl
+                            this.quality = getQuality(server.title)
+                        }
                     )
                 }
                 return servers.isNotEmpty()
