@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.app
 
 class SeriesKaoProvider : MainAPI() {
-    override var name = "SeriesKao"
+    override var name = "SeriesKao test"
     override var mainUrl = "https://serieskao.top" 
     override var supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
