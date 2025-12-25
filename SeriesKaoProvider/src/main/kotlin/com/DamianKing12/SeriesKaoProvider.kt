@@ -1,151 +1,67 @@
-package com.DamianKing12
+package com.lagradost.cloudstream3.movieproviders // Ajusta según tu paquete
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
-import java.net.URLEncoder
+import org.jsoup.nodes.Document
 
 class SeriesKaoProvider : MainAPI() {
-
-    override var mainUrl = "https://serieskao.top"
     override var name = "SeriesKao"
-    override var lang = "es"
-    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
-    override val hasMainPage = false
-
-    private val headers = mapOf(
-        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    )
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        val url = "$mainUrl/search?s=${URLEncoder.encode(query, "UTF-8")}"
-        val doc = app.get(url, headers = headers).document
-
-        return doc.select("a").filter { element ->
-            val href = element.attr("href")
-            href.contains("/pelicula/", ignoreCase = true) || href.contains("/serie/", ignoreCase = true)
-        }.mapNotNull { el ->
-            val href = el.attr("href")
-            val title = el.selectFirst(".poster-card__title")?.text()?.trim() ?: return@mapNotNull null
-            val poster = el.selectFirst("img")?.attr("src") ?: ""
-            val year = el.selectFirst(".poster-card__year")?.text()?.toIntOrNull()
-
-            if (href.contains("/pelicula/", ignoreCase = true)) {
-                newMovieSearchResponse(title, href, TvType.Movie) {
-                    this.posterUrl = poster
-                    this.year = year
-                }
-            } else {
-                newTvSeriesSearchResponse(title, href, TvType.TvSeries) {
-                    this.posterUrl = poster
-                    this.year = year
-                }
-            }
-        }.distinctBy { it.url }
-    }
-
-    override suspend fun load(url: String): LoadResponse {
-        val doc = app.get(url, headers = headers).document
-        val isMovie = url.contains("/pelicula/", ignoreCase = true)
-        val isSerie = url.contains("/serie/", ignoreCase = true)
-
-        if (!isMovie && !isSerie) {
-            throw ErrorLoadingException("URL no válida: $url")
-        }
-
-        val title = doc.selectFirst("h1")?.text()?.trim()
-            ?: doc.selectFirst(".original-title")?.text()?.trim()
-            ?: throw ErrorLoadingException("No se pudo obtener el título")
-
-        val poster = doc.selectFirst("meta[property='og:image']")?.attr("content") ?: ""
-        val description = doc.selectFirst(".synopsis, .description, .plot")?.text()?.trim()
-            ?: doc.select("p").firstOrNull { it.text().length > 50 }?.text()?.trim()
-
-        if (isMovie) {
-            return newMovieLoadResponse(title, url, TvType.Movie, url) {
-                this.posterUrl = poster
-                this.plot = description
-            }
-        } else {
-            val episodes = doc.select("#season-tabs li a[data-tab]").mapNotNull { seasonLink ->
-                val seasonId = seasonLink.attr("data-tab").substringAfter("season-").toIntOrNull() ?: return@mapNotNull null
-                val seasonContent = doc.selectFirst("div.tab-content #season-${seasonId}")
-
-                seasonContent?.select("a.episode-item")?.mapNotNull { episodeLink ->
-                    val href = episodeLink.attr("href").trim()
-                    val epNumText = episodeLink.selectFirst(".episode-number")?.text() ?: ""
-                    val epNum = epNumText.removePrefix("E").toIntOrNull() ?: 0
-                    val epTitle = episodeLink.selectFirst(".episode-title")?.text()?.trim()
-
-                    if (href.isNotBlank() && epNum > 0) {
-                        newEpisode(href) {
-                            this.name = epTitle
-                            this.season = seasonId
-                            this.episode = epNum
-                        }
-                    } else null
-                } ?: emptyList()
-            }.flatten()
-
-            return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.posterUrl = poster
-                this.plot = description
-            }
-        }
-    }
+    override var mainUrl = "https://serieskao.tv" // Ajusta si es otra
+    override var supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
     override suspend fun loadLinks(
         data: String,
-        isCasting: Boolean,
-        subtitleCallback: (SubtitleFile) -> Unit,
+        isDataJob: Boolean,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val doc = app.get(data, headers = headers).document
+        
+        // Usamos safeApiCall para evitar que el plugin se cierre si algo falla
+        return safeApiCall {
+            val document = app.get(data).document
+            val iframeUrl = document.select("iframe[src*=/embed/]").attr("src")
+            
+            if (iframeUrl.isEmpty()) return@safeApiCall false
 
-        doc.select("track[kind=subtitles]").forEach { track ->
-            val src = track.attr("src")
-            if (src.isNotBlank()) {
-                subtitleCallback(SubtitleFile(track.attr("srclang") ?: "es", src))
-            }
-        }
+            val iframeResponse = app.get(iframeUrl, referer = data).text
 
-        val scriptElement = doc.selectFirst("script:containsData(var servers =)")
-        if (scriptElement != null) {
-            val serversJson = scriptElement.data().substringAfter("var servers = ").substringBefore(";").trim()
-            try {
-                val servers = parseJson<List<ServerData>>(serversJson)
-                servers.forEach { server ->
-                    val cleanUrl = server.url.replace("\\/", "/")
-                    
-                    // CORRECCIÓN: Usamos el método 'newExtractorLink' para evitar el constructor deprecated
-                    // o aseguramos que los parámetros coincidan con la firma actual.
-                    callback(
-                        newExtractorLink(
-                            source = name,
-                            name = server.title,
-                            url = cleanUrl
-                        ) {
-                            this.referer = mainUrl
-                            this.quality = getQuality(server.title)
-                        }
+            // Extracción con Regex (usando la lógica universal que descubrimos)
+            val fileCode = Regex("file_code\\s*:\\s*['\"]([^'\"]+)['\"]").find(iframeResponse)?.groupValues?.get(1)
+            val hash = Regex("hash\\s*:\\s*['\"]([^'\"]+)['\"]").find(iframeResponse)?.groupValues?.get(1)
+            val token = Regex("t\\s*=\\s*([^&'\"]+)").find(iframeResponse)?.groupValues?.get(1)
+            val session = Regex("s\\s*=\\s*(\\d+)").find(iframeResponse)?.groupValues?.get(1)
+            
+            // Captura de la carpeta dinámica que cambia por película
+            val folderId = Regex("/(\\d{5})/${fileCode}_").find(iframeResponse)?.groupValues?.get(1) ?: "06438"
+
+            if (fileCode != null && hash != null) {
+                // Validación obligatoria contra el servidor de descarga
+                app.get(
+                    "https://callistanise.com/dl",
+                    params = mapOf(
+                        "op" to "view",
+                        "file_code" to fileCode,
+                        "hash" to hash,
+                        "embed" to "1"
+                    ),
+                    referer = iframeUrl
+                )
+
+                // Enlace maestro M3U8
+                val finalUrl = "https://hgc0uswxhnn8.acek-cdn.com/hls2/01/$folderId/${fileCode}_,l,n,h,.urlset/master.m3u8?t=$token&s=$session"
+
+                callback.invoke(
+                    ExtractorLink(
+                        source = this.name,
+                        name = this.name,
+                        url = finalUrl,
+                        referer = "https://callistanise.com/",
+                        quality = Qualities.P1080.value, // Ponemos 1080 por defecto, el M3U8 ajustará el resto
+                        isM3u8 = true
                     )
-                }
-                return servers.isNotEmpty()
-            } catch (e: Exception) { e.printStackTrace() }
-        }
-
-        return false
+                )
+            }
+            true
+        } ?: false
     }
-
-    private fun getQuality(name: String): Int {
-        val lowerName = name.lowercase()
-        return when {
-            "1080" in lowerName || "fullhd" in lowerName -> Qualities.P1080.value
-            "720" in lowerName || "hd" in lowerName -> Qualities.P720.value
-            "480" in lowerName || "sd" in lowerName -> Qualities.P480.value
-            else -> Qualities.Unknown.value
-        }
-    }
-
-    data class ServerData(val id: Int, val title: String, val url: String)
 }
