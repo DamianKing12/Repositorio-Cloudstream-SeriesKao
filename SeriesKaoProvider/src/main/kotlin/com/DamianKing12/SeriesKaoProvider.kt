@@ -15,9 +15,11 @@ class SeriesKaoProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        return try {
+
+        return runCatching {
+
             val document = app.get(data).document
-            val iframeUrl = document.selectFirst("iframe[src]")?.attr("src")
+            val iframeUrl = document.selectFirst("iframe[src*=/embed/]")?.attr("src")
                 ?: return false
 
             val iframeResponse = app.get(
@@ -25,25 +27,25 @@ class SeriesKaoProvider : MainAPI() {
                 referer = data
             ).text
 
-            val fileCode =
-                Regex("file_code\\s*:\\s*['\"]([^'\"]+)['\"]")
-                    .find(iframeResponse)?.groupValues?.get(1)
+            val fileCode = Regex("file_code\\s*:\\s*['\"]([^'\"]+)['\"]")
+                .find(iframeResponse)?.groupValues?.get(1)
+                ?: return false
 
-            val hash =
-                Regex("hash\\s*:\\s*['\"]([^'\"]+)['\"]")
-                    .find(iframeResponse)?.groupValues?.get(1)
+            val hash = Regex("hash\\s*:\\s*['\"]([^'\"]+)['\"]")
+                .find(iframeResponse)?.groupValues?.get(1)
+                ?: return false
 
-            val token =
-                Regex("[?&]t=([^&]+)")
-                    .find(iframeResponse)?.groupValues?.get(1)
+            val token = Regex("t=([^&'\"]+)")
+                .find(iframeResponse)?.groupValues?.get(1)
+                ?: return false
 
-            val session =
-                Regex("[?&]s=(\\d+)")
-                    .find(iframeResponse)?.groupValues?.get(1)
+            val session = Regex("s=(\\d+)")
+                .find(iframeResponse)?.groupValues?.get(1)
+                ?: return false
 
-            if (fileCode == null || hash == null || token == null || session == null) {
-                return false
-            }
+            val folderId = Regex("/(\\d{5})/$fileCode")
+                .find(iframeResponse)?.groupValues?.get(1)
+                ?: "06438"
 
             // Handshake obligatorio
             app.get(
@@ -57,12 +59,6 @@ class SeriesKaoProvider : MainAPI() {
                 referer = iframeUrl
             )
 
-            val folderId =
-                Regex("/(\\d{5})/$fileCode")
-                    .find(iframeResponse)
-                    ?.groupValues?.get(1)
-                    ?: "06438"
-
             val finalUrl =
                 "https://hgc0uswxhnn8.acek-cdn.com/hls2/01/$folderId/${fileCode}_,l,n,h,.urlset/master.m3u8?t=$token&s=$session"
 
@@ -73,14 +69,12 @@ class SeriesKaoProvider : MainAPI() {
                     url = finalUrl
                 ) {
                     referer = "https://callistanise.com/"
-                    quality = Qualities.Unknown.value
+                    quality = Qualities.P1080.value
                     isM3u8 = true
                 }
             )
 
             true
-        } catch (e: Throwable) {
-            false
-        }
+        }.getOrDefault(false)
     }
 }
