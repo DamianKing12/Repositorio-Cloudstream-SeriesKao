@@ -72,7 +72,6 @@ class SeriesKaoProvider : MainAPI() {
                 ) {
                     referer = "https://callistanise.com/"
                     quality = Qualities.P1080.value
-                    isM3u8 = true
                 }
             )
 
