@@ -3,8 +3,7 @@ import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 plugins {
     id("com.android.library")
     kotlin("android")
-    // ESTA LÍNEA ES VITAL:
-    id("com.lagradost.cloudstream3.gradle")
+    id("com.lagradost.cloudstream3.gradle") // ESTO ES LO QUE CREA LA TAREA 'make'
 }
 
 android {
