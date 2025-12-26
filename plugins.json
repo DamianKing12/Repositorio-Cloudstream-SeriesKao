@@ -1,22 +1,12 @@
 [
-    {
-        "iconUrl": "https://www.google.com/s2/favicons?domain=serieskao.top&sz=%size%",
-        "apiVersion": 1,
-        "repositoryUrl": "https://github.com/DamianKing12/Repositorio-Cloudstream-SeriesKao",
-        "fileSize": 13633,
-        "status": 1,
-        "language": "es",
-        "authors": [
-            "DamianKing12"
-        ],
-        "tvTypes": [
-            "TvSeries",
-            "Movie"
-        ],
-        "version": 1,
-        "internalName": "SeriesKaoProvider",
-        "description": "Plugin para SeriesKao",
-        "url": "https://raw.githubusercontent.com/DamianKing12/Repositorio-Cloudstream-SeriesKao/builds/SeriesKaoProvider.cs3",
-        "name": "SeriesKaoProvider"
-    }
+  {
+    "name": "Series Kao Indexador",
+    "internalName": "SeriesKao",
+    "authors": ["DamianKing12"],
+    "description": "Buscador veloz para navegar en SeriesKao",
+    "version": 1,
+    "baseUrl": "https://serieskao.top",
+    "language": "es",
+    "type": 1
+  }
 ]
