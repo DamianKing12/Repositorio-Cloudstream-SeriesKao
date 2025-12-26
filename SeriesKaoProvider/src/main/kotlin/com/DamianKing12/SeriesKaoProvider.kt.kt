@@ -1,11 +1,11 @@
 package com.DamianKing12
-//HI David
+
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.app
 
 class SeriesKaoProvider : MainAPI() {
-    override var name = "SeriesKao Indexer"
+    override var name = "Series Kao Indexador"
     override var mainUrl = "https://serieskao.top"
     override var supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
     override var lang = "es"

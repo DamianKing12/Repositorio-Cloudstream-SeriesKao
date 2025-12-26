@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Series Kao Indexador",
+    "internalName": "SeriesKao",
+    "authors": ["DamianKing12"],
+    "description": "Buscador veloz para navegar en SeriesKao",
+    "version": 1,
+    "baseUrl": "https://serieskao.top",
+    "language": "es",
+    "type": 1
+  }
+]

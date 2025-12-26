@@ -9,11 +9,7 @@ plugins {
 android {
     namespace = "com.DamianKing12"
     compileSdk = 34
-
-    defaultConfig {
-        minSdk = 21
-    }
-
+    defaultConfig { minSdk = 21 }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -22,7 +18,7 @@ android {
 
 cloudstream {
     setPluginClass("com.DamianKing12.SeriesKaoPlugin")
-    setDescription("Indexador optimizado para SeriesKao")
+    setDescription("Buscador optimizado para navegar SeriesKao")
 }
 
 dependencies {
