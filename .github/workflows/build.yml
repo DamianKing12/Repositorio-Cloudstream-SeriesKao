@@ -7,7 +7,7 @@ on:
       - main
     paths-ignore:
       - '**.md'
-  workflow_dispatch: # Esto permite que lo actives manualmente si falla lo anterior
+  workflow_dispatch:
 
 jobs:
   build:
@@ -30,7 +30,8 @@ jobs:
       - name: Build Plugins
         run: |
           chmod +x gradlew
-          ./gradlew make makePluginsJson
+          # Usamos el comando específico para tu carpeta
+          ./gradlew :SeriesKao:make makePluginsJson
 
       - name: Push to Repo
         run: |

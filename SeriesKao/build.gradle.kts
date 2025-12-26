@@ -1,9 +1,6 @@
-import com.lagradost.cloudstream3.gradle.CloudstreamExtension
-
 plugins {
     id("com.android.library")
     kotlin("android")
-    // ESTA LÍNEA ES VITAL:
     id("com.lagradost.cloudstream3.gradle")
 }
 
@@ -18,8 +15,9 @@ android {
 }
 
 cloudstream {
+    // Aquí registramos el nombre que aparecerá en la app
     setPluginClass("com.DamianKing12.SeriesKaoPlugin")
-    setDescription("Buscador optimizado para navegar SeriesKao")
+    setDescription("Series Kao Indexador - Buscador veloz")
 }
 
 dependencies {
