@@ -15,7 +15,7 @@ android {
 }
 
 cloudstream {
-    // Aquí registramos el nombre que aparecerá en las app
+    // Aquí registramos el nombre que aparecerá en la app
     setPluginClass("com.DamianKing12.SeriesKaoPlugin")
     setDescription("Series Kao Indexador - Buscador veloz")
 }
