@@ -3,6 +3,6 @@
   "description": "Repositorio de buscadores optimizados",
   "manifestVersion": 1,
   "pluginLists": [
-    "https://raw.githubusercontent.com/DamianKing12/Indexadores/refs/heads/master/plugins.json"
+    "https://raw.githubusercontent.com/DamianKing12/Indexadores/main/plugins.json"
   ]
 }
