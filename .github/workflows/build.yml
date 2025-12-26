@@ -44,7 +44,8 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x gradlew
-          ./gradlew make makePluginsJson -Dorg.gradle.warning.mode=summary -Pkotlin.compiler.allWarningsAsErrors=false --no-daemon
+          # Compilamos todos los módulos incluidos en settings.gradle.kts
+          ./gradlew make makePluginsJson
           cp **/build/*.cs3 $GITHUB_WORKSPACE/builds
           cp build/plugins.json $GITHUB_WORKSPACE/builds
 
