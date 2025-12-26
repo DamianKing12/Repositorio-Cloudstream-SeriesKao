@@ -1,8 +1,8 @@
 {
   "name": "Indexadores de DamianKing12",
-  "description": "Colección de buscadores optimizados para Cloudstream",
+  "description": "Repositorio de buscadores optimizados",
   "manifestVersion": 1,
   "pluginLists": [
-    "https://raw.githubusercontent.com/DamianKing12/Indexadores/builds/plugins.json"
+    "https://raw.githubusercontent.com/TU_USUARIO/Indexadores/main/plugins.json"
   ]
 }

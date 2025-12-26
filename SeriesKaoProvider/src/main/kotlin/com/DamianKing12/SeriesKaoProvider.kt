@@ -1,196 +1,69 @@
 package com.DamianKing12
-
+//HI David
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import java.net.URLEncoder
+import com.lagradost.cloudstream3.app
 
 class SeriesKaoProvider : MainAPI() {
-
+    override var name = "SeriesKao Indexer"
     override var mainUrl = "https://serieskao.top"
-    override var name = "SeriesKao"
+    override var supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
     override var lang = "es"
-    override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
-    override val hasMainPage = false
-
-    private val headers = mapOf(
-        "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    )
+    override val hasMainPage = true
 
     override suspend fun search(query: String): List<SearchResponse> {
-        val url = "$mainUrl/search?s=${URLEncoder.encode(query, "UTF-8")}"
-        val doc = app.get(url, headers = headers).document
+        val url = "$mainUrl/?s=$query"
+        val doc = app.get(url).document
 
-        return doc.select("a").filter { element ->
-            val href = element.attr("href")
-            href.contains("/pelicula/", ignoreCase = true) || href.contains("/serie/", ignoreCase = true)
-        }.mapNotNull { el ->
-            val href = el.attr("href")
-            val title = el.selectFirst(".poster-card__title")?.text()?.trim() ?: return@mapNotNull null
-            val poster = el.selectFirst("img")?.attr("src") ?: ""
-            val year = el.selectFirst(".poster-card__year")?.text()?.toIntOrNull()
+        return doc.select("div.result-item").mapNotNull {
+            val title = it.selectFirst("div.title a")?.text() ?: return@mapNotNull null
+            val href = it.selectFirst("div.title a")?.attr("href") ?: ""
+            val poster = it.selectFirst("img")?.attr("src")
+            val type = if (href.contains("/series/")) TvType.TvSeries else TvType.Movie
 
-            if (href.contains("/pelicula/", ignoreCase = true)) {
-                newMovieSearchResponse(title, href) {
-                    this.posterUrl = poster
-                    this.year = year
-                }
-            } else {
-                newTvSeriesSearchResponse(title, href) {
-                    this.posterUrl = poster
-                    this.year = year
-                }
+            newMovieSearchResponse(title, href, type) {
+                this.posterUrl = fixUrl(poster)
             }
-        }.distinctBy { it.url }
+        }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val doc = app.get(url, headers = headers).document
-        val isMovie = url.contains("/pelicula/", ignoreCase = true)
-        val isSerie = url.contains("/serie/", ignoreCase = true)
+        val doc = app.get(url).document
+        val title = doc.selectFirst("h1")?.text()?.trim() ?: ""
+        val poster = doc.selectFirst("div.poster img")?.attr("src")
+        val plot = doc.selectFirst("div.wp-content p")?.text()
 
-        if (!isMovie && !isSerie) {
-            throw ErrorLoadingException("URL no válida: $url")
+        val episodes = doc.select("ul.episodios li").mapNotNull {
+            val epHref = it.selectFirst("a")?.attr("href") ?: return@mapNotNull null
+            val epTitle = it.selectFirst("div.episodiotitle a")?.text() ?: ""
+            newEpisode(epHref) { this.name = epTitle }
         }
 
-        val title = doc.selectFirst("h1")?.text()?.trim()
-            ?: doc.selectFirst(".original-title")?.text()?.trim()
-            ?: throw ErrorLoadingException("No se pudo obtener el título")
-
-        val poster = doc.selectFirst("meta[property='og:image']")?.attr("content") ?: ""
-        val description = doc.selectFirst(".synopsis, .description, .plot")?.text()?.trim()
-            ?: doc.select("p").firstOrNull { it.text().length > 50 }?.text()?.trim()
-
-        if (isMovie) {
-            return newMovieLoadResponse(title, url, TvType.Movie, url) {
-                this.posterUrl = poster
-                this.plot = description
+        return if (episodes.isEmpty()) {
+            newMovieLoadResponse(title, url, TvType.Movie, url) {
+                this.posterUrl = fixUrl(poster)
+                this.plot = plot
             }
         } else {
-            val episodes = doc.select("#season-tabs li a[data-tab]").mapNotNull { seasonLink ->
-                val seasonId = seasonLink.attr("data-tab").substringAfter("season-").toIntOrNull() ?: return@mapNotNull null
-
-                val seasonContent = doc.selectFirst("div.tab-content #season-${seasonId}")
-
-                seasonContent?.select("a.episode-item")?.mapNotNull { episodeLink ->
-                    val href = episodeLink.attr("href").trim()
-                    val epNumText = episodeLink.selectFirst(".episode-number")?.text() ?: ""
-                    val epNum = epNumText.removePrefix("E").toIntOrNull() ?: 0
-                    val epTitle = episodeLink.selectFirst(".episode-title")?.text()?.trim()
-
-                    if (href.isNotBlank() && epNum > 0) {
-                        newEpisode(href) {
-                            this.name = epTitle
-                            this.season = seasonId
-                            this.episode = epNum
-                        }
-                    } else null
-                } ?: emptyList()
-            }.flatten()
-
-            return newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
-                this.posterUrl = poster
-                this.plot = description
+            newTvSeriesLoadResponse(title, url, TvType.TvSeries, episodes) {
+                this.posterUrl = fixUrl(poster)
+                this.plot = plot
             }
         }
     }
 
-    // ✅ SOLUCIÓN FINAL: newExtractorLink con bloque lambda - SIN WARNINGS
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val doc = app.get(data, headers = headers).document
-
-        // 1️⃣ SUBTÍTULOS
-        doc.select("track[kind=subtitles]").forEach { track ->
-            val src = track.attr("src")
-            if (src.isNotBlank()) {
-                subtitleCallback(
-                    SubtitleFile(
-                        lang = track.attr("srclang") ?: "es",
-                        url = src
-                    )
-                )
-            }
+        val doc = app.get(data).document
+        doc.select("iframe").amap {
+            var iframeUrl = it.attr("src")
+            if (iframeUrl.startsWith("//")) iframeUrl = "https:$iframeUrl"
+            loadExtractor(iframeUrl, data, subtitleCallback, callback)
         }
-
-        // 2️⃣ IFRAMES - newExtractorLink con lambda
-        doc.select("iframe").forEach { iframe ->
-            val src = iframe.attr("src")
-            if (src.isNotBlank()) {
-                callback(
-                    newExtractorLink(
-                        source = "iframe",
-                        name = "iframe",
-                        url = src
-                    ) {
-                        this.referer = mainUrl
-                        this.quality = Qualities.Unknown.value
-                    }
-                )
-            }
-        }
-
-        // 3️⃣ MASTER.TXT - newExtractorLink con lambda
-        val masterScript = doc.select("script").map { it.data() }.firstOrNull { it.contains("master.txt") }
-        if (masterScript != null) {
-            val masterUrl = Regex("""(https?://[^"'\s]+master\.txt)""").find(masterScript)?.value
-            if (masterUrl != null) {
-                callback(
-                    newExtractorLink(
-                        source = "HLS",
-                        name = "HLS",
-                        url = masterUrl
-                    ) {
-                        this.referer = mainUrl
-                        this.quality = Qualities.Unknown.value
-                        this.isM3u8 = true
-                    }
-                )
-            }
-        }
-
-        // 4️⃣ SERVIDORES VAR SERVERS - newExtractorLink con lambda
-        val scriptElement = doc.selectFirst("script:containsData(var servers =)")
-        if (scriptElement != null) {
-            val serversJson = scriptElement.data().substringAfter("var servers = ").substringBefore(";").trim()
-            return try {
-                val servers = AppUtils.parseJson<List<ServerData>>(serversJson)
-                servers.forEach { server ->
-                    val cleanUrl = server.url.replace("\\/", "/")
-                    val quality = getQuality(server.title)
-                    callback(
-                        newExtractorLink(
-                            source = server.title,
-                            name = server.title,
-                            url = cleanUrl
-                        ) {
-                            this.referer = mainUrl
-                            this.quality = quality
-                            this.isM3u8 = cleanUrl.contains(".m3u8", ignoreCase = true)
-                        }
-                    )
-                }
-                servers.isNotEmpty()
-            } catch (e: Exception) {
-                false
-            }
-        }
-
-        return doc.select("iframe").isNotEmpty() || masterScript != null
+        return true
     }
-
-    private fun getQuality(name: String): Int {
-        val lowerName = name.lowercase()
-        return when {
-            "1080" in lowerName || "fullhd" in lowerName -> Qualities.P1080.value
-            "720" in lowerName || "hd" in lowerName -> Qualities.P720.value
-            "480" in lowerName || "sd" in lowerName -> Qualities.P480.value
-            else -> Qualities.Unknown.value
-        }
-    }
-
-    data class ServerData(val id: Int, val title: String, val url: String)
 }

@@ -1,24 +1,31 @@
-dependencies {
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.recyclerview:recyclerview:1.3.2")
-}
+import com.lagradost.cloudstream3.gradle.CloudstreamExtension
 
-version = 1
-
-cloudstream {
-    description = "Plugin para SeriesKao"
-    authors = listOf("DamianKing12")
-    status = 1
-    tvTypes = listOf("TvSeries", "Movie")
-    requiresResources = false
-    language = "es"
-    iconUrl = "https://www.google.com/s2/favicons?domain=serieskao.top&sz=%size%"
+plugins {
+    id("com.android.library")
+    kotlin("android")
+    id("com.lagradost.cloudstream3.gradle")
 }
 
 android {
     namespace = "com.DamianKing12"
-    buildFeatures {
-        buildConfig = true
-        viewBinding = false
+    compileSdk = 34
+
+    defaultConfig {
+        minSdk = 21
     }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+cloudstream {
+    setPluginClass("com.DamianKing12.SeriesKaoPlugin")
+    setDescription("Indexador optimizado para SeriesKao")
+}
+
+dependencies {
+    implementation("com.lagradost:cloudstream3:pre-release")
+    implementation("org.jsoup:jsoup:1.15.3")
 }
